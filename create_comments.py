@@ -3,25 +3,25 @@ import random
 import csv
 from datetime import datetime, timedelta
 
-# Function to generate random customer number (3 letters + 9 digits)
+# ====== Function to generate random customer number (3 letters + 9 digits)
 def generate_customer_number():
     letters = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=3))
     digits = ''.join(random.choices('0123456789', k=9))
     return letters + digits
 
-# Function to generate random order number (up to 5 digits)
+# ====== Function to generate random order number (up to 5 digits)
 def generate_order_number():
     return random.randint(1, 99999)
 
-# Function to generate random date in 2025 up to April 8
+# ====== Function to generate random date in 2025 up to April 10
 def generate_order_date():
     start_date = datetime(2025, 1, 1)
-    end_date = datetime(2025, 4, 8)
+    end_date = datetime(2025, 4, 10)
     delta = end_date - start_date
     random_days = random.randint(0, delta.days)
     return (start_date + timedelta(days=random_days)).strftime('%Y-%m-%d')
 
-# Function to generate customer response based on NPS score
+# ====== Function to generate mock customer response based on an NPS score
 def generate_customer_response(nps_score):
     # Expanded topics dictionary with more realistic sporting goods store complaints
     topics = {
@@ -72,7 +72,7 @@ def generate_customer_response(nps_score):
     selected_topics = random.sample(topics[nps_score], min(num_issues, len(topics[nps_score])))
     return " and ".join(selected_topics) + "."
 
-# Generate 205 randomly populated rows
+# ====== Generate 205 randomly populated rows of customer comments
 data = []
 for _ in range(205):
     nps_score = random.randint(1, 5)
@@ -85,7 +85,7 @@ for _ in range(205):
     ]
     data.append(row)
 
-# Write to CSV
+# ====== Write the data to a CSV
 with open('nps_data.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Customer Number', 'Order Number', 'Order Date', 'NPS Score', 'Customer Response'])
