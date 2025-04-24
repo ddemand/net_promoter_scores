@@ -2,12 +2,15 @@
 import random
 import csv
 from datetime import datetime, timedelta
+import ulid  # For generating ULIDs
+from faker import Faker  # For generating fake names
 
-# ====== Function to generate random customer number (3 letters + 9 digits)
+# Initialize Faker for generating fake names
+fake = Faker()
+
+# ====== Function to generate ULID-based customer identifier
 def generate_customer_number():
-    letters = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=3))
-    digits = ''.join(random.choices('0123456789', k=9))
-    return letters + digits
+    return ulid.new().str  # Generates a sortable ULID as a string
 
 # ====== Function to generate random order number (up to 5 digits)
 def generate_order_number():
@@ -78,6 +81,8 @@ for _ in range(205):
     nps_score = random.randint(1, 5)
     row = [
         generate_customer_number(),
+        fake.first_name(),  # Generate fake first name
+        fake.last_name(),   # Generate fake last name
         generate_order_number(),
         generate_order_date(),
         nps_score,
@@ -88,7 +93,7 @@ for _ in range(205):
 # ====== Write the data to a CSV
 with open('nps_data.csv', 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Customer Number', 'Order Number', 'Order Date', 'NPS Score', 'Customer Response'])
+    writer.writerow(['Customer Number', 'First Name', 'Last Name', 'Order Number', 'Order Date', 'NPS Score', 'Customer Response'])
     writer.writerows(data)
 
 print("CSV file 'nps_data.csv' has been generated.")

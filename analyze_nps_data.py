@@ -1,12 +1,11 @@
 import pandas as pd
-from openai import OpenAI
 import json
+from datetime import datetime
+from openai import OpenAI
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from datetime import datetime
-
 
 # ====== Get API key
 def get_api_key(api_name):
@@ -29,7 +28,6 @@ def get_api_key(api_name):
         print(f"Error reading API keys: {e}")
         return None
 
-
 # ====== xAI Grok3 API setup
 api_key = get_api_key("xai_api_key")
 if not api_key:
@@ -40,23 +38,23 @@ client = OpenAI(
     base_url="https://api.x.ai/v1",
 )
 
-
 # ====== Function to analyze NPS data
 def analyze_nps_data(df):
     """
     Analyze NPS data and return a summary with top positive and negative insights.
 
     Args:
-        df (pd.DataFrame): DataFrame with 'NPS Score' (1-5) and 'Customer Response' columns
+        df (pd.DataFrame): DataFrame with 'Customer Number', 'Order Number', 'NPS Score', 'Customer Response' columns
 
     Returns:
         dict: JSON-parsed result with 'summary', 'top_positive', 'top_negative'
     """
-    if 'NPS Score' not in df.columns or 'Customer Response' not in df.columns:
-        raise ValueError("DataFrame must contain 'NPS Score' and 'Customer Response' columns")
+    required_columns = ['Customer Number', 'Order Number', 'NPS Score', 'Customer Response']
+    if not all(col in df.columns for col in required_columns):
+        raise ValueError(f"DataFrame must contain {required_columns}")
 
     nps_summary = df['NPS Score'].value_counts().sort_index().to_dict()
-    responses = df[['NPS Score', 'Customer Response']].to_dict(orient='records')
+    responses = df[required_columns].to_dict(orient='records')
 
     prompt = f"""
     I have a DataFrame with customer feedback data. The 'NPS Score' column ranges from 1 (highest, most positive) to 5 (lowest, most negative). The 'Customer Response' column contains comments explaining their sentiment. Here’s the data:
@@ -87,6 +85,24 @@ def analyze_nps_data(df):
         print(f"API Error: {e}")
         raise
 
+# ====== Function to assign Action column
+def assign_action_column(df):
+    """
+    Assign 'Action' column based on NPS score.
+
+    Args:
+        df (pd.DataFrame): Original DataFrame with 'NPS Score'
+
+    Returns:
+        pd.DataFrame: DataFrame with new 'Action' column
+    """
+    # Initialize 'Action' column as 'No'
+    df['Action'] = 'No'
+
+    # Set 'Action' to 'Yes' for negative sentiment (NPS 4 or 5)
+    df.loc[df['NPS Score'].isin([4, 5]), 'Action'] = 'Yes'
+
+    return df
 
 # ====== Function to generate PDF report
 def generate_pdf_report(result, output_path="nps_summary_report.pdf"):
@@ -163,15 +179,21 @@ def generate_pdf_report(result, output_path="nps_summary_report.pdf"):
     except Exception as e:
         print(f"Error generating PDF: {e}")
 
-
-# ====== Example usage
+# ====== Main execution
 try:
+    # Load the original DataFrame
     df = pd.read_csv('nps_data.csv')
-except FileNotFoundError:
-    print("Error: 'nps_data.csv' not found. Using sample data instead.")
 
-try:
-    result = analyze_nps_data(df)
+    # Create a filtered DataFrame excluding 'First Name' and 'Last Name'
+    filtered_df = df[['Customer Number', 'Order Number', 'Order Date', 'NPS Score', 'Customer Response']]
+
+    # Analyze the filtered data
+    result = analyze_nps_data(filtered_df)
+
+    # Assign 'Action' column to the original DataFrame
+    df = assign_action_column(df)
+
+    # Print results
     print("Overall Customer Sentiment Summary:")
     print(result['summary'])
     print("\nTop 3 Reasons We Are Doing Great:")
@@ -180,6 +202,15 @@ try:
     print("\nTop 3 Items Needing Improvement:")
     for i, reason in enumerate(result['top_negative'], 1):
         print(f"{i}. {reason}")
+
+    # Generate PDF report
     generate_pdf_report(result)
+
+    # Save the updated DataFrame with Action column
+    df.to_csv('nps_data_with_results.csv', index=False)
+    print("Updated data saved to 'nps_data_with_results.csv'")
+
+except FileNotFoundError:
+    print("Error: 'nps_data.csv' not found.")
 except Exception as e:
-    print(f"Error during analysis or PDF generation: {e}")
+    print(f"Error during analysis or processing: {e}")
